@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pinput/pinput.dart';
 
+import 'package:permission_handler/permission_handler.dart';
+
 import '../../providers/auth_provider.dart';
 import '../../providers/shop_provider.dart';
 import '../../services/auto_reminder_service.dart';
 import '../../services/shop_service.dart';
-import '../../services/sms_service.dart';
 import '../../theme/app_theme.dart';
 import '../shop/shop_setup_screen.dart';
 
@@ -33,12 +34,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Future<void> _toggleAutoSms(bool value) async {
     if (value) {
-      final granted = await SmsService.ensureSmsPermission();
+      final status = await Permission.notification.request();
       if (!mounted) return;
-      if (!granted) {
+      if (!status.isGranted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('SMS yuborish uchun ruxsat kerak'),
+            content: Text('Bildirishnoma uchun ruxsat kerak'),
             backgroundColor: AppTheme.danger,
           ),
         );
@@ -78,9 +79,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const Divider(height: 1),
           SwitchListTile(
             secondary: const Icon(Icons.notifications_active_outlined),
-            title: const Text('Avtomatik SMS eslatmasi'),
+            title: const Text('Avtomatik eslatma bildirishnoma'),
             subtitle: const Text(
-              'Qarzi muddati o\'tgan mijozlarga kuniga 3 marta avtomatik SMS yuboriladi',
+              'Qarzi muddati o\'tgan mijozlar haqida kuniga 3 marta telefoningizga bildirishnoma keladi. Bildirishnomani bossangiz mijoz sahifasi ochiladi.',
             ),
             value: _autoSms ?? false,
             onChanged: _autoSms == null ? null : _toggleAutoSms,

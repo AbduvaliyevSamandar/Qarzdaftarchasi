@@ -3,8 +3,8 @@ import 'package:workmanager/workmanager.dart';
 
 import '../data/local/database.dart';
 import '../data/repositories/reminder_repository.dart';
+import 'notification_service.dart';
 import 'shop_service.dart';
-import 'sms_service.dart';
 
 const String kAutoReminderTaskName = 'qarzdaftar_auto_reminder';
 const Duration kReminderInterval = Duration(hours: 8);
@@ -15,8 +15,9 @@ void workmanagerCallbackDispatcher() {
     if (task != kAutoReminderTaskName) return true;
     try {
       await AppDatabase.instance.init();
-      final sent = await AutoReminderService.runOnce();
-      return sent >= 0;
+      await NotificationService.instance.init();
+      final shown = await AutoReminderService.runOnce();
+      return shown >= 0;
     } catch (e) {
       return false;
     }
@@ -45,7 +46,7 @@ class AutoReminderService {
 
     final now = DateTime.now();
     final cutoff = now.subtract(kReminderInterval - const Duration(minutes: 30));
-    var sentCount = 0;
+    var shownCount = 0;
 
     for (final c in overdue) {
       final phone = c.phone;
@@ -54,22 +55,19 @@ class AutoReminderService {
       final last = await repo.lastSentFor(c.customerId);
       if (last != null && last.isAfter(cutoff)) continue;
 
-      final message = SmsService.buildReminderText(
-        customerName: c.name,
-        remainingAmount: c.remaining,
-        shopName: shop.name,
-        ownerPhone: shop.ownerPhone,
-      );
-      final result = await SmsService.sendInBackground(
-        phone: phone,
-        message: message,
-      );
-      if (result.ok) {
+      try {
+        await NotificationService.instance.showOverdueReminder(
+          customerId: c.customerId,
+          customerName: c.name,
+          remainingAmount: c.remaining,
+        );
         await repo.markSent(c.customerId, now);
-        sentCount++;
+        shownCount++;
+      } catch (_) {
+        continue;
       }
     }
-    return sentCount;
+    return shownCount;
   }
 
   static Future<void> initialize() async {

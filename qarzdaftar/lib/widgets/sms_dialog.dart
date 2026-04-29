@@ -55,7 +55,7 @@ class _SmsDialogState extends State<SmsDialog> {
 
   Future<void> _send() async {
     setState(() => _sending = true);
-    final result = await SmsService.sendDirect(
+    final result = await SmsService.sendViaDefaultApp(
       phone: widget.phone,
       message: _textCtrl.text,
     );
@@ -63,30 +63,22 @@ class _SmsDialogState extends State<SmsDialog> {
     setState(() => _sending = false);
     if (result.ok) {
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('SMS yuborildi'),
-          backgroundColor: AppTheme.success,
-        ),
-      );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(result.error ?? 'SMS yuborilmadi'),
+          content: Text(result.error ?? 'SMS ilovasi ochilmadi'),
           backgroundColor: AppTheme.danger,
-          action: SnackBarAction(
-            label: 'SMS ilovasi orqali',
-            textColor: Colors.white,
-            onPressed: () async {
-              await SmsService.sendViaDefaultApp(
-                phone: widget.phone,
-                message: _textCtrl.text,
-              );
-            },
-          ),
         ),
       );
     }
+  }
+
+  Future<void> _copy() async {
+    await SmsService.copyTextToClipboard(_textCtrl.text);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Matn nusxalandi')),
+    );
   }
 
   @override
@@ -119,13 +111,10 @@ class _SmsDialogState extends State<SmsDialog> {
               children: [
                 const Icon(Icons.sms_outlined, color: AppTheme.primary),
                 const SizedBox(width: 8),
-                Expanded(
+                const Expanded(
                   child: Text(
                     'SMS yuborish',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
                   ),
                 ),
                 IconButton(
@@ -167,43 +156,34 @@ class _SmsDialogState extends State<SmsDialog> {
                 ),
               ),
             ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: _sending
-                        ? null
-                        : () async {
-                            await SmsService.copyTextToClipboard(_textCtrl.text);
-                            if (!context.mounted) return;
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Matn nusxalandi')),
-                            );
-                          },
-                    icon: const Icon(Icons.copy),
-                    label: const Text('Nusxalash'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  flex: 2,
-                  child: ElevatedButton.icon(
-                    onPressed: _sending ? null : _send,
-                    icon: _sending
-                        ? const SizedBox(
-                            height: 18,
-                            width: 18,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2,
-                            ),
-                          )
-                        : const Icon(Icons.send),
-                    label: Text(_sending ? 'Yuborilmoqda…' : 'Yuborish'),
-                  ),
-                ),
-              ],
+            const SizedBox(height: 8),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 4),
+              child: Text(
+                'SMS ilovangiz ochiladi — matn allaqachon tayyor turadi, faqat "Send" tugmasini bosing.',
+                style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+              ),
+            ),
+            const SizedBox(height: 12),
+            ElevatedButton.icon(
+              onPressed: _sending ? null : _send,
+              icon: _sending
+                  ? const SizedBox(
+                      height: 18,
+                      width: 18,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : const Icon(Icons.send),
+              label: Text(_sending ? 'Ochilmoqda…' : 'Yuborish'),
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              onPressed: _sending ? null : _copy,
+              icon: const Icon(Icons.copy),
+              label: const Text('Faqat matnni nusxalash'),
             ),
           ],
         ),

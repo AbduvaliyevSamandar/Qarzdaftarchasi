@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:another_telephony/telephony.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -55,10 +57,11 @@ class SmsService {
     try {
       final granted = await _telephony.requestSmsPermissions;
       if (granted != true) {
-        return SmsResult.error('SMS yuborish uchun ruxsat berilmadi');
+        return SmsResult.error(
+          'SMS yuborish uchun ruxsat yo\'q. Telefon sozlamalaridan ruxsat bering.',
+        );
       }
-      await _telephony.sendSms(to: cleaned, message: message);
-      return SmsResult.success();
+      return await _sendWithStatus(cleaned, message);
     } on PlatformException catch (e) {
       return SmsResult.error('SMS yuborilmadi: ${e.message ?? e.code}');
     } catch (e) {
@@ -79,15 +82,49 @@ class SmsService {
       if (granted != true) {
         return SmsResult.error('SMS ruxsati yo\'q');
       }
-      await _telephony.sendSms(
-        to: cleaned,
-        message: message,
-        isMultipart: message.length > 160,
-      );
-      return SmsResult.success();
+      return await _sendWithStatus(cleaned, message);
     } catch (e) {
       return SmsResult.error('SMS xatolik: $e');
     }
+  }
+
+  static Future<SmsResult> _sendWithStatus(String phone, String message) async {
+    final completer = Completer<SmsResult>();
+    var notified = false;
+
+    try {
+      _telephony.sendSms(
+        to: phone,
+        message: message,
+        isMultipart: message.length > 160,
+        statusListener: (status) {
+          if (notified) return;
+          if (status == SendStatus.SENT) {
+            notified = true;
+            completer.complete(SmsResult.success());
+          }
+        },
+      );
+    } on PlatformException catch (e) {
+      if (!completer.isCompleted) {
+        completer.complete(
+          SmsResult.error('SMS yuborilmadi: ${e.message ?? e.code}'),
+        );
+      }
+      return completer.future;
+    } catch (e) {
+      if (!completer.isCompleted) {
+        completer.complete(SmsResult.error('Xatolik: $e'));
+      }
+      return completer.future;
+    }
+
+    return completer.future.timeout(
+      const Duration(seconds: 15),
+      onTimeout: () => SmsResult.error(
+        'SMS yuborish kechikdi. Operator ulanishini tekshiring.',
+      ),
+    );
   }
 
   static Future<SmsResult> sendViaDefaultApp({
