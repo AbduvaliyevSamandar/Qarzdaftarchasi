@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell($lockedFiles = @\\(\\); Get-ChildItem -Path \"C:\\\\Users\\\\Samandar\\\\Desktop\\\\QarzDaftarchasi\\\\backend\\\\venv\" -Recurse -File -ErrorAction SilentlyContinue | ForEach-Object { try { [IO.File]::OpenWrite\\($_.FullName\\).Close\\(\\) } catch { $lockedFiles += $_.FullName } }; if \\($lockedFiles.Count -eq 0\\) { Write-Output \"no-locks-found\" } else { $lockedFiles | Select-Object -First 5 })",
+      "PowerShell(Rename-Item *)",
+      "PowerShell(handle.exe \"C:\\\\Users\\\\Samandar\\\\Desktop\\\\QarzDaftarchasi\\\\backend\" 2>&1 | Select-Object -First 20)",
+      "Bash(flutter --version)",
+      "Bash(firebase --version)",
+      "Bash(flutterfire --version)",
+      "Bash(dart --version)",
+      "Bash(npm install *)",
+      "Bash(dart pub *)",
+      "Bash(\"/c/Users/Samandar/AppData/Local/Pub/Cache/bin/flutterfire.bat\" --version)",
+      "Bash(\"C:/Users/Samandar/AppData/Local/Pub/Cache/bin/flutterfire\" --version)",
+      "PowerShell(firebase *)",
+      "PowerShell(npm config *)",
+      "PowerShell(& \"C:\\\\Users\\\\Samandar\\\\AppData\\\\Roaming\\\\npm\\\\firebase.cmd\" --version)",
+      "PowerShell(& \"C:\\\\Users\\\\Samandar\\\\AppData\\\\Roaming\\\\npm\\\\firebase.cmd\" projects:list 2>&1)",
+      "Bash(flutter pub *)",
+      "PowerShell(flutterfire configure *)",
+      "Bash(flutter analyze *)",
+      "PowerShell(gcloud --version 2>&1 | Select-Object -First 1)",
+      "Bash(flutter build *)",
+      "PowerShell(firebase apps:sdkconfig *)",
+      "PowerShell(firebase apps:android:sha:create *)",
+      "PowerShell(firebase apps:android:sha:list *)",
+      "PowerShell(Get-Content *)",
+      "PowerShell(Remove-Item *)",
+      "PowerShell(gh *)",
+      "Bash(git init *)",
+      "Bash(git config *)",
+      "Bash(git add *)"
+    ]
+  }
+}
