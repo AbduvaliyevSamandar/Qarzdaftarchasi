@@ -2,9 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../models/transaction.dart';
+import '../../providers/customers_provider.dart';
+import '../../providers/shop_provider.dart';
 import '../../providers/transactions_provider.dart';
+import '../../services/sms_service.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/formatters.dart';
+import '../../utils/input_formatters.dart';
+import '../../widgets/amount_field.dart';
 
 class AddTransactionScreen extends ConsumerStatefulWidget {
   const AddTransactionScreen({super.key, required this.customerId});
@@ -46,7 +51,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
-    final amount = double.tryParse(_amountCtrl.text.replaceAll(',', '.'));
+    final amount = MoneyInputFormatter.parseAmount(_amountCtrl.text);
     if (amount == null || amount <= 0) return;
 
     setState(() => _saving = true);
@@ -60,6 +65,12 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
             dueDate: _type == TxnType.debt ? _dueDate : null,
           );
       if (!mounted) return;
+
+      if (_type == TxnType.payment) {
+        await _maybeSendThankYou();
+      }
+
+      if (!mounted) return;
       Navigator.pop(context);
     } catch (e) {
       if (!mounted) return;
@@ -70,9 +81,53 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     }
   }
 
+  Future<void> _maybeSendThankYou() async {
+    ref.invalidate(customersProvider);
+    final list = await ref.read(customersProvider.future);
+    final cb = list.where((b) => b.customer.id == widget.customerId).firstOrNull;
+    if (cb == null) return;
+    if (cb.remaining > 0) return;
+    if (cb.totalDebt <= 0) return;
+    final phone = cb.customer.phone;
+    if (phone == null || phone.trim().isEmpty) return;
+
+    final shop = ref.read(shopProfileProvider).valueOrNull;
+    final shopName = (shop?.name.isNotEmpty ?? false) ? shop!.name : 'do\'kon';
+    final message = SmsService.buildThankYouText(
+      customerName: cb.customer.name,
+      shopName: shopName,
+      ownerPhone: shop?.ownerPhone,
+    );
+
+    final granted = await SmsService.ensureSmsPermission();
+    if (!mounted) return;
+    if (!granted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Rahmat SMS uchun ruxsat yo\'q')),
+      );
+      return;
+    }
+
+    final result = await SmsService.sendInBackground(
+      phone: phone,
+      message: message,
+    );
+    if (!mounted) return;
+    if (result.ok) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Mijozga "rahmat" SMS yuborildi'),
+          backgroundColor: AppTheme.success,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDebt = _type == TxnType.debt;
+    final productNames = ref.watch(productNamesProvider).valueOrNull ?? const [];
+
     return Scaffold(
       appBar: AppBar(title: const Text('Yangi yozuv')),
       body: SafeArea(
@@ -98,30 +153,14 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                 onSelectionChanged: (s) => setState(() => _type = s.first),
               ),
               const SizedBox(height: 20),
-              TextFormField(
-                controller: _amountCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Summa (so\'m) *',
-                  prefixIcon: Icon(Icons.payments_outlined),
-                ),
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                validator: (v) {
-                  final n = double.tryParse((v ?? '').replaceAll(',', '.'));
-                  if (n == null || n <= 0) return 'To\'g\'ri summa kiriting';
-                  return null;
-                },
-              ),
+              AmountField(controller: _amountCtrl, autofocus: true),
               const SizedBox(height: 12),
-              if (isDebt)
-                TextFormField(
+              if (isDebt) ...[
+                _ProductAutocomplete(
                   controller: _productCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Mahsulot nomi',
-                    prefixIcon: Icon(Icons.shopping_basket_outlined),
-                  ),
+                  options: productNames,
                 ),
-              if (isDebt) const SizedBox(height: 12),
-              if (isDebt)
+                const SizedBox(height: 12),
                 Card(
                   margin: EdgeInsets.zero,
                   shape: RoundedRectangleBorder(
@@ -150,7 +189,8 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                     onTap: _pickDueDate,
                   ),
                 ),
-              if (isDebt) const SizedBox(height: 12),
+                const SizedBox(height: 12),
+              ],
               TextFormField(
                 controller: _noteCtrl,
                 decoration: const InputDecoration(
@@ -177,6 +217,72 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _ProductAutocomplete extends StatelessWidget {
+  const _ProductAutocomplete({
+    required this.controller,
+    required this.options,
+  });
+
+  final TextEditingController controller;
+  final List<String> options;
+
+  @override
+  Widget build(BuildContext context) {
+    return Autocomplete<String>(
+      initialValue: TextEditingValue(text: controller.text),
+      optionsBuilder: (TextEditingValue value) {
+        final query = value.text.toLowerCase().trim();
+        if (query.isEmpty) {
+          return options.take(20);
+        }
+        return options
+            .where((o) => o.toLowerCase().contains(query))
+            .take(20);
+      },
+      onSelected: (value) => controller.text = value,
+      fieldViewBuilder: (context, fieldCtrl, focusNode, onFieldSubmitted) {
+        fieldCtrl.text = controller.text;
+        fieldCtrl.addListener(() => controller.text = fieldCtrl.text);
+        return TextFormField(
+          controller: fieldCtrl,
+          focusNode: focusNode,
+          textCapitalization: TextCapitalization.sentences,
+          decoration: const InputDecoration(
+            labelText: 'Mahsulot nomi',
+            hintText: 'Masalan: non, sut, qand',
+            prefixIcon: Icon(Icons.shopping_basket_outlined),
+          ),
+        );
+      },
+      optionsViewBuilder: (context, onSelected, items) {
+        return Align(
+          alignment: Alignment.topLeft,
+          child: Material(
+            elevation: 4,
+            borderRadius: BorderRadius.circular(12),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 240, maxWidth: 360),
+              child: ListView.builder(
+                padding: EdgeInsets.zero,
+                shrinkWrap: true,
+                itemCount: items.length,
+                itemBuilder: (context, i) {
+                  final option = items.elementAt(i);
+                  return ListTile(
+                    dense: true,
+                    title: Text(option),
+                    onTap: () => onSelected(option),
+                  );
+                },
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

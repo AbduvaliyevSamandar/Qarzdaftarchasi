@@ -10,6 +10,7 @@ class ShopService {
   static const _kOwnerPhone = 'shop_owner_phone';
   static const _kOwnerName = 'shop_owner_name';
   static const _kAddress = 'shop_address';
+  static const _kAutoSms = 'shop_auto_sms_enabled';
 
   Future<ShopProfile?> load() async {
     final prefs = await SharedPreferences.getInstance();
@@ -29,6 +30,16 @@ class ShopService {
     await _put(prefs, _kOwnerPhone, profile.ownerPhone);
     await _put(prefs, _kOwnerName, profile.ownerName);
     await _put(prefs, _kAddress, profile.address);
+  }
+
+  Future<bool> isAutoSmsEnabled() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_kAutoSms) ?? false;
+  }
+
+  Future<void> setAutoSmsEnabled(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_kAutoSms, value);
   }
 
   Future<void> _put(SharedPreferences prefs, String key, String? value) async {

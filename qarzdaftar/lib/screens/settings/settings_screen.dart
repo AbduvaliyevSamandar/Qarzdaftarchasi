@@ -4,14 +4,53 @@ import 'package:pinput/pinput.dart';
 
 import '../../providers/auth_provider.dart';
 import '../../providers/shop_provider.dart';
+import '../../services/auto_reminder_service.dart';
+import '../../services/shop_service.dart';
+import '../../services/sms_service.dart';
 import '../../theme/app_theme.dart';
 import '../shop/shop_setup_screen.dart';
 
-class SettingsScreen extends ConsumerWidget {
+class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+  bool? _autoSms;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAutoSms();
+  }
+
+  Future<void> _loadAutoSms() async {
+    final v = await ShopService.instance.isAutoSmsEnabled();
+    if (mounted) setState(() => _autoSms = v);
+  }
+
+  Future<void> _toggleAutoSms(bool value) async {
+    if (value) {
+      final granted = await SmsService.ensureSmsPermission();
+      if (!mounted) return;
+      if (!granted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('SMS yuborish uchun ruxsat kerak'),
+            backgroundColor: AppTheme.danger,
+          ),
+        );
+        return;
+      }
+    }
+    await AutoReminderService.applySettings(value);
+    if (mounted) setState(() => _autoSms = value);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final shop = ref.watch(shopProfileProvider).valueOrNull;
     return Scaffold(
       appBar: AppBar(title: const Text('Sozlamalar')),
@@ -35,6 +74,16 @@ class SettingsScreen extends ConsumerWidget {
                 ),
               );
             },
+          ),
+          const Divider(height: 1),
+          SwitchListTile(
+            secondary: const Icon(Icons.notifications_active_outlined),
+            title: const Text('Avtomatik SMS eslatmasi'),
+            subtitle: const Text(
+              'Qarzi muddati o\'tgan mijozlarga kuniga 3 marta avtomatik SMS yuboriladi',
+            ),
+            value: _autoSms ?? false,
+            onChanged: _autoSms == null ? null : _toggleAutoSms,
           ),
           const Divider(height: 1),
           ListTile(

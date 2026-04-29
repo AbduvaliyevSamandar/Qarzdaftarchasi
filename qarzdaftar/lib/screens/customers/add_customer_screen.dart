@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../providers/customers_provider.dart';
+import '../../utils/input_formatters.dart';
+import '../../widgets/phone_field.dart';
 
 class AddCustomerScreen extends ConsumerStatefulWidget {
   const AddCustomerScreen({super.key});
@@ -31,9 +33,10 @@ class _AddCustomerScreenState extends ConsumerState<AddCustomerScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _saving = true);
     try {
+      final phone = UzbPhoneInputFormatter.toE164(_phoneCtrl.text);
       await ref.read(customersProvider.notifier).create(
             name: _nameCtrl.text,
-            phone: _phoneCtrl.text,
+            phone: phone,
             address: _addressCtrl.text,
             note: _noteCtrl.text,
           );
@@ -69,14 +72,7 @@ class _AddCustomerScreenState extends ConsumerState<AddCustomerScreen> {
                     (v == null || v.trim().isEmpty) ? 'Ismni kiriting' : null,
               ),
               const SizedBox(height: 12),
-              TextFormField(
-                controller: _phoneCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Telefon',
-                  prefixIcon: Icon(Icons.phone_outlined),
-                ),
-                keyboardType: TextInputType.phone,
-              ),
+              PhoneField(controller: _phoneCtrl),
               const SizedBox(height: 12),
               TextFormField(
                 controller: _addressCtrl,
@@ -84,6 +80,7 @@ class _AddCustomerScreenState extends ConsumerState<AddCustomerScreen> {
                   labelText: 'Manzil',
                   prefixIcon: Icon(Icons.location_on_outlined),
                 ),
+                textCapitalization: TextCapitalization.sentences,
               ),
               const SizedBox(height: 12),
               TextFormField(

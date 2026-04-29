@@ -38,6 +38,23 @@ class TransactionRepository {
     return rows.map(Txn.fromMap).toList();
   }
 
+  Future<List<String>> distinctProductNames(String shopOwnerId) async {
+    final rows = await _db.rawQuery('''
+      SELECT DISTINCT t.product_name
+      FROM transactions t
+      JOIN customers c ON c.id = t.customer_id
+      WHERE c.shop_owner_id = ?
+        AND t.product_name IS NOT NULL
+        AND TRIM(t.product_name) != ''
+      ORDER BY t.product_name ASC
+    ''', [shopOwnerId]);
+    return rows
+        .map((r) => (r['product_name'] as String).trim())
+        .where((s) => s.isNotEmpty)
+        .toSet()
+        .toList();
+  }
+
   Future<({double totalDebt, double totalPaid})> shopTotals(String shopOwnerId) async {
     final rows = await _db.rawQuery('''
       SELECT

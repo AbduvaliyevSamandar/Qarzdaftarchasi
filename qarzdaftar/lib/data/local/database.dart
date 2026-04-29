@@ -17,8 +17,9 @@ class AppDatabase {
     final path = join(await getDatabasesPath(), 'qarzdaftar.db');
     _db = await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
     );
   }
 
@@ -52,5 +53,23 @@ class AppDatabase {
     ''');
     await db.execute('CREATE INDEX idx_txn_customer ON transactions(customer_id)');
     await db.execute('CREATE INDEX idx_txn_due ON transactions(due_date)');
+
+    await _createReminderTable(db);
+  }
+
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await _createReminderTable(db);
+    }
+  }
+
+  Future<void> _createReminderTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE reminder_log (
+        customer_id TEXT PRIMARY KEY,
+        last_sent_at TEXT NOT NULL,
+        FOREIGN KEY(customer_id) REFERENCES customers(id) ON DELETE CASCADE
+      )
+    ''');
   }
 }

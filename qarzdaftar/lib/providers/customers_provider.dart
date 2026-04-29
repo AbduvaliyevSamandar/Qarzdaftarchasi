@@ -67,3 +67,10 @@ final shopTotalsProvider = FutureProvider.autoDispose((ref) async {
   ref.watch(customersProvider);
   return ref.read(transactionRepoProvider).shopTotals(ownerId);
 });
+
+final productNamesProvider = FutureProvider.autoDispose<List<String>>((ref) async {
+  final ownerId = ref.watch(shopOwnerIdProvider);
+  if (ownerId == null) return const [];
+  ref.watch(customersProvider);
+  return ref.read(transactionRepoProvider).distinctProductNames(ownerId);
+});

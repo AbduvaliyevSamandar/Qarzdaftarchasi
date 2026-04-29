@@ -1,11 +1,13 @@
 import 'package:intl/intl.dart';
 
+import 'input_formatters.dart';
+
 class Formatters {
-  static final _money = NumberFormat('#,###', 'uz_UZ');
   static final _date = DateFormat('dd.MM.yyyy');
   static final _dateTime = DateFormat('dd.MM.yyyy HH:mm');
 
-  static String money(num value) => '${_money.format(value)} so\'m';
+  static String money(num value) =>
+      '${MoneyInputFormatter.formatAmount(value)} so\'m';
   static String date(DateTime d) => _date.format(d);
   static String dateTime(DateTime d) => _dateTime.format(d);
 

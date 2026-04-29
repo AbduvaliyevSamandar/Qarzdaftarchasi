@@ -9,6 +9,8 @@ import '../../providers/transactions_provider.dart';
 import '../../services/sms_service.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/formatters.dart';
+import '../../utils/input_formatters.dart';
+import '../../widgets/sms_dialog.dart';
 import '../transactions/add_transaction_screen.dart';
 
 class CustomerDetailScreen extends ConsumerWidget {
@@ -20,38 +22,18 @@ class CustomerDetailScreen extends ConsumerWidget {
     final shop = ref.read(shopProfileProvider).valueOrNull;
     final shopName = (shop?.name.isNotEmpty ?? false) ? shop!.name : 'do\'kon';
     final ownerPhone = shop?.ownerPhone;
-    final result = await SmsService.sendReminder(
-      phone: cb.customer.phone!,
+    final text = SmsService.buildReminderText(
       customerName: cb.customer.name,
       remainingAmount: cb.remaining,
       shopName: shopName,
       ownerPhone: ownerPhone,
     );
-    if (!context.mounted) return;
-    if (!result.ok) {
-      final text = SmsService.buildReminderText(
-        customerName: cb.customer.name,
-        remainingAmount: cb.remaining,
-        shopName: shopName,
-        ownerPhone: ownerPhone,
-      );
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(result.error ?? 'SMS yuborilmadi'),
-          action: SnackBarAction(
-            label: 'Matnni nusxalash',
-            onPressed: () async {
-              await SmsService.copyTextToClipboard(text);
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Matn nusxalandi')),
-                );
-              }
-            },
-          ),
-        ),
-      );
-    }
+    await SmsDialog.show(
+      context: context,
+      phone: UzbPhoneInputFormatter.fromE164(cb.customer.phone),
+      initialMessage: text,
+      recipientName: cb.customer.name,
+    );
   }
 
   Future<void> _call(BuildContext context, String phone) async {

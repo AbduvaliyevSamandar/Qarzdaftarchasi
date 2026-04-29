@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/shop_profile.dart';
 import '../../providers/shop_provider.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/input_formatters.dart';
+import '../../widgets/phone_field.dart';
 
 class ShopSetupScreen extends ConsumerStatefulWidget {
   const ShopSetupScreen({super.key, this.initial, this.editMode = false});
@@ -44,10 +46,11 @@ class _ShopSetupScreenState extends ConsumerState<ShopSetupScreen> {
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _saving = true);
+    final phone = UzbPhoneInputFormatter.toE164(_phoneCtrl.text);
     final profile = ShopProfile(
       name: _nameCtrl.text.trim(),
       ownerName: _ownerNameCtrl.text.trim(),
-      ownerPhone: _phoneCtrl.text.trim(),
+      ownerPhone: phone,
       address: _addressCtrl.text.trim(),
     );
     await ref.read(shopProfileProvider.notifier).save(profile);
@@ -110,14 +113,10 @@ class _ShopSetupScreenState extends ConsumerState<ShopSetupScreen> {
                 textCapitalization: TextCapitalization.words,
               ),
               const SizedBox(height: 12),
-              TextFormField(
+              PhoneField(
                 controller: _phoneCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Telefon raqamingiz',
-                  prefixIcon: Icon(Icons.phone_outlined),
-                  hintText: '+998 XX XXX XX XX',
-                ),
-                keyboardType: TextInputType.phone,
+                label: 'Telefon raqamingiz',
+                initialValue: widget.initial?.ownerPhone,
               ),
               const SizedBox(height: 12),
               TextFormField(
