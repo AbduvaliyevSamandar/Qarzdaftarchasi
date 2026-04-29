@@ -1,0 +1,41 @@
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../models/shop_profile.dart';
+
+class ShopService {
+  ShopService._();
+  static final ShopService instance = ShopService._();
+
+  static const _kName = 'shop_name';
+  static const _kOwnerPhone = 'shop_owner_phone';
+  static const _kOwnerName = 'shop_owner_name';
+  static const _kAddress = 'shop_address';
+
+  Future<ShopProfile?> load() async {
+    final prefs = await SharedPreferences.getInstance();
+    final name = prefs.getString(_kName);
+    if (name == null || name.isEmpty) return null;
+    return ShopProfile(
+      name: name,
+      ownerPhone: prefs.getString(_kOwnerPhone),
+      ownerName: prefs.getString(_kOwnerName),
+      address: prefs.getString(_kAddress),
+    );
+  }
+
+  Future<void> save(ShopProfile profile) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_kName, profile.name);
+    await _put(prefs, _kOwnerPhone, profile.ownerPhone);
+    await _put(prefs, _kOwnerName, profile.ownerName);
+    await _put(prefs, _kAddress, profile.address);
+  }
+
+  Future<void> _put(SharedPreferences prefs, String key, String? value) async {
+    if (value == null || value.trim().isEmpty) {
+      await prefs.remove(key);
+    } else {
+      await prefs.setString(key, value.trim());
+    }
+  }
+}

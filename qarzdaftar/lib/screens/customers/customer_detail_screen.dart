@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/customer_balance.dart';
 import '../../models/transaction.dart';
 import '../../providers/customers_provider.dart';
+import '../../providers/shop_provider.dart';
 import '../../providers/transactions_provider.dart';
 import '../../services/sms_service.dart';
 import '../../theme/app_theme.dart';
@@ -14,6 +15,54 @@ class CustomerDetailScreen extends ConsumerWidget {
   const CustomerDetailScreen({super.key, required this.customerId});
 
   final String customerId;
+
+  Future<void> _sendSms(BuildContext context, WidgetRef ref, CustomerBalance cb) async {
+    final shop = ref.read(shopProfileProvider).valueOrNull;
+    final shopName = (shop?.name.isNotEmpty ?? false) ? shop!.name : 'do\'kon';
+    final ownerPhone = shop?.ownerPhone;
+    final result = await SmsService.sendReminder(
+      phone: cb.customer.phone!,
+      customerName: cb.customer.name,
+      remainingAmount: cb.remaining,
+      shopName: shopName,
+      ownerPhone: ownerPhone,
+    );
+    if (!context.mounted) return;
+    if (!result.ok) {
+      final text = SmsService.buildReminderText(
+        customerName: cb.customer.name,
+        remainingAmount: cb.remaining,
+        shopName: shopName,
+        ownerPhone: ownerPhone,
+      );
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result.error ?? 'SMS yuborilmadi'),
+          action: SnackBarAction(
+            label: 'Matnni nusxalash',
+            onPressed: () async {
+              await SmsService.copyTextToClipboard(text);
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Matn nusxalandi')),
+                );
+              }
+            },
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<void> _call(BuildContext context, String phone) async {
+    final result = await SmsService.call(phone);
+    if (!context.mounted) return;
+    if (!result.ok) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result.error ?? 'Qo\'ng\'iroq qila olmadi')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -39,19 +88,12 @@ class CustomerDetailScreen extends ConsumerWidget {
                   IconButton(
                     icon: const Icon(Icons.message_outlined),
                     tooltip: 'SMS yuborish',
-                    onPressed: () {
-                      SmsService.sendReminder(
-                        phone: cb!.customer.phone!,
-                        customerName: cb.customer.name,
-                        remainingAmount: cb.remaining,
-                        shopName: 'do\'kon',
-                      );
-                    },
+                    onPressed: () => _sendSms(context, ref, cb!),
                   ),
                   IconButton(
                     icon: const Icon(Icons.call_outlined),
                     tooltip: 'Qo\'ng\'iroq',
-                    onPressed: () => SmsService.call(cb!.customer.phone!),
+                    onPressed: () => _call(context, cb!.customer.phone!),
                   ),
                 ],
               );
