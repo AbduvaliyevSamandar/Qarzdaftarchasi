@@ -3,14 +3,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:pinput/pinput.dart';
 
+import '../../l10n/app_locale.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/customers_provider.dart';
+import '../../providers/locale_provider.dart';
 import '../../providers/shop_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../services/auto_reminder_service.dart';
 import '../../services/export_service.dart';
 import '../../services/shop_service.dart';
 import '../../theme/app_theme.dart';
+import '../backup/backup_screen.dart';
 import '../products/products_screen.dart';
 import '../shop/shop_setup_screen.dart';
 
@@ -102,25 +105,27 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final shop = ref.watch(shopProfileProvider).valueOrNull;
     final themeMode =
         ref.watch(themeModeProvider).valueOrNull ?? ThemeMode.system;
+    final locale = ref.watch(localeProvider).valueOrNull ?? AppLocale.uzLatin;
+    final tr = ref.watch(stringsProvider);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Sozlamalar',
-          style: TextStyle(fontWeight: FontWeight.w700),
+        title: Text(
+          tr.tabSettings,
+          style: const TextStyle(fontWeight: FontWeight.w700),
         ),
       ),
       body: ListView(
         children: [
           ListTile(
             leading: const Icon(Icons.storefront_outlined),
-            title: const Text('Do\'kon ma\'lumotlari'),
+            title: Text(tr.shopInfo),
             subtitle: shop != null
                 ? Text(shop.name +
                     (shop.ownerPhone != null && shop.ownerPhone!.isNotEmpty
                         ? '  •  ${shop.ownerPhone}'
                         : ''))
-                : const Text('Kiritilmagan'),
+                : null,
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
               Navigator.push(
@@ -135,10 +140,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const Divider(height: 1),
           ListTile(
             leading: const Icon(Icons.inventory_2_outlined),
-            title: const Text('Mahsulotlar va narxlar'),
-            subtitle: const Text(
-              'Tez-tez qarzga olinadigan mahsulotlar ro\'yxati',
-            ),
+            title: Text(tr.productsAndPrices),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
               Navigator.push(
@@ -150,41 +152,56 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const Divider(height: 1),
           SwitchListTile(
             secondary: const Icon(Icons.notifications_active_outlined),
-            title: const Text('Avtomatik eslatma bildirishnoma'),
-            subtitle: const Text(
-              'Qarzi muddati o\'tgan mijozlar haqida kuniga 3 marta telefoningizga bildirishnoma keladi',
-            ),
+            title: Text(tr.autoReminderTitle),
             value: _autoSms ?? false,
             onChanged: _autoSms == null ? null : _toggleAutoSms,
           ),
           const Divider(height: 1),
           ListTile(
-            leading: const Icon(Icons.color_lens_outlined),
-            title: const Text('Tema'),
-            subtitle: Text(_themeLabel(themeMode)),
+            leading: const Icon(Icons.language),
+            title: Text(tr.languageMenu),
+            subtitle: Text(locale.label),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () => _showThemeSheet(context, themeMode),
+            onTap: () => _showLanguageSheet(context, locale),
+          ),
+          const Divider(height: 1),
+          ListTile(
+            leading: const Icon(Icons.color_lens_outlined),
+            title: Text(tr.themeMenu),
+            subtitle: Text(_themeLabel(themeMode, tr)),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => _showThemeSheet(context, themeMode, tr),
+          ),
+          const Divider(height: 1),
+          ListTile(
+            leading: const Icon(Icons.cloud_download_outlined),
+            title: Text(tr.backupRestore),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const BackupScreen()),
+              );
+            },
           ),
           const Divider(height: 1),
           ListTile(
             leading: const Icon(Icons.table_chart_outlined),
-            title: const Text('Excel\'ga eksport'),
-            subtitle: const Text('Mijozlar ro\'yxatini Excel fayl ko\'rinishida'),
+            title: Text(tr.exportExcel),
             trailing: const Icon(Icons.share_outlined),
             onTap: _exportExcel,
           ),
           const Divider(height: 1),
           ListTile(
             leading: const Icon(Icons.picture_as_pdf_outlined),
-            title: const Text('PDF\'ga eksport'),
-            subtitle: const Text('Chop etishga tayyor PDF hisobot'),
+            title: Text(tr.exportPdf),
             trailing: const Icon(Icons.share_outlined),
             onTap: _exportPdf,
           ),
           const Divider(height: 1),
           ListTile(
             leading: const Icon(Icons.lock_reset_outlined),
-            title: const Text('PIN-kodni o\'zgartirish'),
+            title: Text(tr.changePin),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
               Navigator.push(
@@ -196,9 +213,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const Divider(height: 1),
           ListTile(
             leading: const Icon(Icons.logout, color: AppTheme.danger),
-            title: const Text(
-              'Chiqish (qulflash)',
-              style: TextStyle(color: AppTheme.danger),
+            title: Text(
+              tr.logout,
+              style: const TextStyle(color: AppTheme.danger),
             ),
             onTap: () async {
               await ref.read(authControllerProvider.notifier).lock();
@@ -218,13 +235,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  String _themeLabel(ThemeMode m) => switch (m) {
-        ThemeMode.dark => 'Tungi',
-        ThemeMode.light => 'Kunduzgi',
-        ThemeMode.system => 'Tizim sozlamasi',
+  String _themeLabel(ThemeMode m, dynamic tr) => switch (m) {
+        ThemeMode.dark => tr.themeDark as String,
+        ThemeMode.light => tr.themeLight as String,
+        ThemeMode.system => tr.themeSystem as String,
       };
 
-  Future<void> _showThemeSheet(BuildContext context, ThemeMode current) async {
+  Future<void> _showThemeSheet(
+    BuildContext context,
+    ThemeMode current,
+    dynamic tr,
+  ) async {
     final picked = await showModalBottomSheet<ThemeMode>(
       context: context,
       builder: (_) => SafeArea(
@@ -232,17 +253,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             const SizedBox(height: 12),
-            const Text(
-              'Tema',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+            Text(
+              tr.themeMenu as String,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 8),
             for (final m in ThemeMode.values)
-              RadioListTile<ThemeMode>(
-                title: Text(_themeLabel(m)),
-                value: m,
-                groupValue: current,
-                onChanged: (v) => Navigator.pop(_, v),
+              ListTile(
+                leading: Icon(m == current
+                    ? Icons.radio_button_checked
+                    : Icons.radio_button_unchecked),
+                title: Text(_themeLabel(m, tr)),
+                onTap: () => Navigator.pop(_, m),
               ),
             const SizedBox(height: 8),
           ],
@@ -251,6 +273,32 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
     if (picked != null) {
       await ref.read(themeModeProvider.notifier).setMode(picked);
+    }
+  }
+
+  Future<void> _showLanguageSheet(BuildContext context, AppLocale current) async {
+    final picked = await showModalBottomSheet<AppLocale>(
+      context: context,
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 12),
+            for (final l in AppLocale.values)
+              ListTile(
+                leading: Icon(l == current
+                    ? Icons.radio_button_checked
+                    : Icons.radio_button_unchecked),
+                title: Text(l.label),
+                onTap: () => Navigator.pop(_, l),
+              ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (picked != null) {
+      await ref.read(localeProvider.notifier).setLocale(picked);
     }
   }
 }

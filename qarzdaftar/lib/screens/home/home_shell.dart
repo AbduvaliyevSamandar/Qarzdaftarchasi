@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../providers/locale_provider.dart';
 import '../reports/reports_screen.dart';
 import '../settings/settings_screen.dart';
 import 'home_screen.dart';
@@ -47,6 +48,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
 
   @override
   Widget build(BuildContext context) {
+    final tr = ref.watch(stringsProvider);
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) async {
@@ -59,26 +61,26 @@ class _HomeShellState extends ConsumerState<HomeShell> {
         bottomNavigationBar: NavigationBar(
           selectedIndex: _index,
           onDestinationSelected: (i) => setState(() => _index = i),
-          destinations: const [
+          destinations: [
             NavigationDestination(
-              icon: Icon(Icons.people_outline),
-              selectedIcon: Icon(Icons.people),
-              label: 'Mijozlar',
+              icon: const Icon(Icons.people_outline),
+              selectedIcon: const Icon(Icons.people),
+              label: tr.tabCustomers,
             ),
             NavigationDestination(
-              icon: Icon(Icons.swap_vert_outlined),
-              selectedIcon: Icon(Icons.swap_vert),
-              label: 'Tranzaksiyalar',
+              icon: const Icon(Icons.swap_vert_outlined),
+              selectedIcon: const Icon(Icons.swap_vert),
+              label: tr.tabTransactions,
             ),
             NavigationDestination(
-              icon: Icon(Icons.insert_chart_outlined),
-              selectedIcon: Icon(Icons.insert_chart),
-              label: 'Hisobot',
+              icon: const Icon(Icons.insert_chart_outlined),
+              selectedIcon: const Icon(Icons.insert_chart),
+              label: tr.tabReports,
             ),
             NavigationDestination(
-              icon: Icon(Icons.settings_outlined),
-              selectedIcon: Icon(Icons.settings),
-              label: 'Sozlamalar',
+              icon: const Icon(Icons.settings_outlined),
+              selectedIcon: const Icon(Icons.settings),
+              label: tr.tabSettings,
             ),
           ],
         ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app.dart';
@@ -9,7 +10,8 @@ import 'services/notification_service.dart';
 import 'services/shop_service.dart';
 
 Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  final binding = WidgetsFlutterBinding.ensureInitialized();
+  FlutterNativeSplash.preserve(widgetsBinding: binding);
 
   await AppDatabase.instance.init();
   await AuthService.instance.ensureUserId();
@@ -21,4 +23,5 @@ Future<void> main() async {
   }
 
   runApp(const ProviderScope(child: QarzDaftarApp()));
+  FlutterNativeSplash.remove();
 }

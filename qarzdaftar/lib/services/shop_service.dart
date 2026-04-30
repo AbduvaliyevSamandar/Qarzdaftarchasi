@@ -12,6 +12,7 @@ class ShopService {
   static const _kAddress = 'shop_address';
   static const _kAutoSms = 'shop_auto_sms_enabled';
   static const _kThemeMode = 'app_theme_mode'; // system | light | dark
+  static const _kLocale = 'app_locale'; // uz_Latn | uz_Cyrl | ru
 
   Future<ShopProfile?> load() async {
     final prefs = await SharedPreferences.getInstance();
@@ -51,6 +52,16 @@ class ShopService {
   Future<void> saveThemeMode(String value) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_kThemeMode, value);
+  }
+
+  Future<String> loadLocale() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_kLocale) ?? 'uz_Latn';
+  }
+
+  Future<void> saveLocale(String value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_kLocale, value);
   }
 
   Future<void> _put(SharedPreferences prefs, String key, String? value) async {

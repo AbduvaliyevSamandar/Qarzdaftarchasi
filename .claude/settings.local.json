@@ -59,7 +59,10 @@
       "Bash(\"C:/Users/Samandar/AppData/Local/Android/Sdk/platform-tools/adb.exe\" -s ORXWUCBQSOAIINAM shell pm list packages)",
       "Bash(\"C:/Users/Samandar/AppData/Local/Android/Sdk/platform-tools/adb.exe\" -s ORXWUCBQSOAIINAM shell pm list permissions -d -g)",
       "Bash(\"C:/Users/Samandar/AppData/Local/Android/Sdk/platform-tools/adb.exe\" -s ORXWUCBQSOAIINAM shell dumpsys package com.example.qarzdaftar)",
-      "Bash(grep --line-buffered -iE \"qarzdaftar|telephony|sendsms|SmsManager|sms.{0,40}sent|sms.{0,40}fail|denied|Permission|MIUI.*sms\")"
+      "Bash(grep --line-buffered -iE \"qarzdaftar|telephony|sendsms|SmsManager|sms.{0,40}sent|sms.{0,40}fail|denied|Permission|MIUI.*sms\")",
+      "Bash(python -c \"from PIL import Image; print\\('PIL ok'\\)\")",
+      "Bash(python *)",
+      "Bash(dart run *)"
     ]
   }
 }
