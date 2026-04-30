@@ -16,7 +16,9 @@ class BalanceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final remaining = totalDebt - totalPaid;
-    return Container(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOut,
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -26,6 +28,13 @@ class BalanceCard extends StatelessWidget {
           colors: [AppTheme.primary, Color(0xFF4F46E5)],
         ),
         borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.primary.withValues(alpha: 0.25),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -35,12 +44,26 @@ class BalanceCard extends StatelessWidget {
             style: TextStyle(color: Colors.white70, fontSize: 14),
           ),
           const SizedBox(height: 6),
-          Text(
-            Formatters.money(remaining),
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 30,
-              fontWeight: FontWeight.w800,
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 250),
+            transitionBuilder: (child, animation) => FadeTransition(
+              opacity: animation,
+              child: SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(0, 0.3),
+                  end: Offset.zero,
+                ).animate(animation),
+                child: child,
+              ),
+            ),
+            child: Text(
+              Formatters.money(remaining),
+              key: ValueKey(remaining),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 30,
+                fontWeight: FontWeight.w800,
+              ),
             ),
           ),
           const SizedBox(height: 16),
@@ -52,11 +75,7 @@ class BalanceCard extends StatelessWidget {
                   value: Formatters.money(totalDebt),
                 ),
               ),
-              Container(
-                width: 1,
-                height: 40,
-                color: Colors.white24,
-              ),
+              Container(width: 1, height: 40, color: Colors.white24),
               Expanded(
                 child: _Stat(
                   label: 'Qaytarilgan',
@@ -85,12 +104,16 @@ class _Stat extends StatelessWidget {
         children: [
           Text(label, style: const TextStyle(color: Colors.white70, fontSize: 12)),
           const SizedBox(height: 4),
-          Text(
-            value,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 250),
+            child: Text(
+              value,
+              key: ValueKey(value),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ],

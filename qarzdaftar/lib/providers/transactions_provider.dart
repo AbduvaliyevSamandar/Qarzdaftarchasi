@@ -40,6 +40,28 @@ class AddTransactionController {
     ref.invalidate(customersProvider);
     ref.invalidate(transactionsForCustomerProvider(customerId));
   }
+
+  Future<void> update(Txn txn) async {
+    await ref.read(transactionRepoProvider).update(txn);
+    ref.invalidate(customersProvider);
+    ref.invalidate(transactionsForCustomerProvider(txn.customerId));
+  }
+
+  Future<Txn?> remove(String id) async {
+    final repo = ref.read(transactionRepoProvider);
+    final existing = await repo.getById(id);
+    if (existing == null) return null;
+    await repo.delete(id);
+    ref.invalidate(customersProvider);
+    ref.invalidate(transactionsForCustomerProvider(existing.customerId));
+    return existing;
+  }
+
+  Future<void> restore(Txn txn) async {
+    await ref.read(transactionRepoProvider).insert(txn);
+    ref.invalidate(customersProvider);
+    ref.invalidate(transactionsForCustomerProvider(txn.customerId));
+  }
 }
 
 final addTransactionControllerProvider =

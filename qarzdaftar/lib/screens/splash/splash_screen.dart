@@ -5,7 +5,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/shop_provider.dart';
 import '../auth/pin_login_screen.dart';
 import '../auth/pin_setup_screen.dart';
-import '../home/home_screen.dart';
+import '../home/home_shell.dart';
 import '../shop/shop_setup_screen.dart';
 
 class SplashScreen extends ConsumerWidget {
@@ -54,7 +54,7 @@ class _AfterUnlock extends ConsumerWidget {
         if (profile == null || !profile.isComplete) {
           return const ShopSetupScreen();
         }
-        return const HomeScreen();
+        return const HomeShell();
       },
     );
   }

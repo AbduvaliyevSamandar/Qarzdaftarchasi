@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../utils/input_formatters.dart';
+import 'calculator_dialog.dart';
 
 class AmountField extends StatelessWidget {
   const AmountField({
@@ -10,12 +11,14 @@ class AmountField extends StatelessWidget {
     this.label = 'Summa (so\'m)',
     this.required = true,
     this.autofocus = false,
+    this.showCalculator = true,
   });
 
   final TextEditingController controller;
   final String label;
   final bool required;
   final bool autofocus;
+  final bool showCalculator;
 
   @override
   Widget build(BuildContext context) {
@@ -30,7 +33,23 @@ class AmountField extends StatelessWidget {
       decoration: InputDecoration(
         labelText: required ? '$label *' : label,
         prefixIcon: const Icon(Icons.payments_outlined),
-        suffixText: 'so\'m',
+        suffixIcon: showCalculator
+            ? IconButton(
+                icon: const Icon(Icons.calculate_outlined),
+                tooltip: 'Kalkulyator',
+                onPressed: () async {
+                  final current = MoneyInputFormatter.parseAmount(controller.text);
+                  final result = await CalculatorDialog.show(
+                    context: context,
+                    initialAmount: current,
+                  );
+                  if (result != null) {
+                    controller.text =
+                        MoneyInputFormatter.formatAmount(result.toInt());
+                  }
+                },
+              )
+            : null,
       ),
       validator: required
           ? (v) {

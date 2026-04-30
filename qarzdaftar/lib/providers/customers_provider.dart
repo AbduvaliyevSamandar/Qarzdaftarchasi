@@ -5,6 +5,7 @@ import '../data/repositories/customer_repository.dart';
 import '../data/repositories/transaction_repository.dart';
 import '../models/customer.dart';
 import '../models/customer_balance.dart';
+import '../services/photo_service.dart';
 import 'auth_provider.dart';
 
 final customerRepoProvider = Provider((ref) => CustomerRepository());
@@ -30,6 +31,7 @@ class CustomersNotifier extends AsyncNotifier<List<CustomerBalance>> {
     String? phone,
     String? address,
     String? note,
+    String? photoPath,
   }) async {
     final c = Customer(
       id: _uuid.v4(),
@@ -38,6 +40,7 @@ class CustomersNotifier extends AsyncNotifier<List<CustomerBalance>> {
       phone: phone?.trim().isEmpty == true ? null : phone?.trim(),
       address: address?.trim().isEmpty == true ? null : address?.trim(),
       note: note?.trim().isEmpty == true ? null : note?.trim(),
+      photoPath: photoPath,
       createdAt: DateTime.now(),
     );
     await ref.read(customerRepoProvider).upsert(c);
@@ -45,8 +48,17 @@ class CustomersNotifier extends AsyncNotifier<List<CustomerBalance>> {
     return c;
   }
 
+  Future<void> updateCustomer(Customer customer) async {
+    await ref.read(customerRepoProvider).update(customer);
+    ref.invalidateSelf();
+  }
+
   Future<void> remove(String id) async {
+    final existing = await ref.read(customerRepoProvider).getById(id);
     await ref.read(customerRepoProvider).delete(id);
+    if (existing?.photoPath != null) {
+      await PhotoService.instance.deleteIfExists(existing!.photoPath);
+    }
     ref.invalidateSelf();
   }
 
@@ -74,3 +86,12 @@ final productNamesProvider = FutureProvider.autoDispose<List<String>>((ref) asyn
   ref.watch(customersProvider);
   return ref.read(transactionRepoProvider).distinctProductNames(ownerId);
 });
+
+enum CustomerFilter { all, hasDebt, overdue, cleared }
+
+enum CustomerSort { byDebtDesc, byNameAsc, byRecent }
+
+final customerFilterProvider =
+    StateProvider<CustomerFilter>((_) => CustomerFilter.all);
+final customerSortProvider =
+    StateProvider<CustomerSort>((_) => CustomerSort.byDebtDesc);

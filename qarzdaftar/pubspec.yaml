@@ -32,6 +32,17 @@ dependencies:
   pinput: ^5.0.0
   fl_chart: ^0.69.0
 
+  # Media
+  image_picker: ^1.1.2
+
+  # Voice
+  speech_to_text: ^7.0.0
+
+  # Export
+  excel: ^4.0.6
+  pdf: ^3.11.1
+  printing: ^5.13.4
+
   # SMS / telephony
   another_telephony: ^0.4.1
 

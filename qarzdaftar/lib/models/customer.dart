@@ -5,6 +5,7 @@ class Customer {
   final String? phone;
   final String? address;
   final String? note;
+  final String? photoPath;
   final DateTime createdAt;
 
   const Customer({
@@ -14,6 +15,7 @@ class Customer {
     this.phone,
     this.address,
     this.note,
+    this.photoPath,
     required this.createdAt,
   });
 
@@ -22,6 +24,8 @@ class Customer {
     String? phone,
     String? address,
     String? note,
+    String? photoPath,
+    bool removePhoto = false,
   }) {
     return Customer(
       id: id,
@@ -30,6 +34,7 @@ class Customer {
       phone: phone ?? this.phone,
       address: address ?? this.address,
       note: note ?? this.note,
+      photoPath: removePhoto ? null : (photoPath ?? this.photoPath),
       createdAt: createdAt,
     );
   }
@@ -41,6 +46,7 @@ class Customer {
         'phone': phone,
         'address': address,
         'note': note,
+        'photo_path': photoPath,
         'created_at': createdAt.toIso8601String(),
       };
 
@@ -51,6 +57,7 @@ class Customer {
         phone: m['phone'] as String?,
         address: m['address'] as String?,
         note: m['note'] as String?,
+        photoPath: m['photo_path'] as String?,
         createdAt: DateTime.parse(m['created_at'] as String),
       );
 }

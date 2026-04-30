@@ -11,6 +11,7 @@ class ShopService {
   static const _kOwnerName = 'shop_owner_name';
   static const _kAddress = 'shop_address';
   static const _kAutoSms = 'shop_auto_sms_enabled';
+  static const _kThemeMode = 'app_theme_mode'; // system | light | dark
 
   Future<ShopProfile?> load() async {
     final prefs = await SharedPreferences.getInstance();
@@ -40,6 +41,16 @@ class ShopService {
   Future<void> setAutoSmsEnabled(bool value) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_kAutoSms, value);
+  }
+
+  Future<String> loadThemeMode() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_kThemeMode) ?? 'system';
+  }
+
+  Future<void> saveThemeMode(String value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_kThemeMode, value);
   }
 
   Future<void> _put(SharedPreferences prefs, String key, String? value) async {

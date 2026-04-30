@@ -15,6 +15,15 @@ class CustomerRepository {
     );
   }
 
+  Future<void> update(Customer c) async {
+    await _db.update(
+      'customers',
+      c.toMap(),
+      where: 'id = ?',
+      whereArgs: [c.id],
+    );
+  }
+
   Future<void> delete(String id) async {
     await _db.delete('customers', where: 'id = ?', whereArgs: [id]);
   }

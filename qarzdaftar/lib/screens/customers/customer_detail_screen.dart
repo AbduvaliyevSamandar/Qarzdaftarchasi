@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../models/customer.dart';
 import '../../models/customer_balance.dart';
 import '../../models/transaction.dart';
 import '../../providers/customers_provider.dart';
@@ -10,8 +11,10 @@ import '../../services/sms_service.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/formatters.dart';
 import '../../utils/input_formatters.dart';
+import '../../widgets/customer_avatar.dart';
 import '../../widgets/sms_dialog.dart';
 import '../transactions/add_transaction_screen.dart';
+import 'edit_customer_screen.dart';
 
 class CustomerDetailScreen extends ConsumerWidget {
   const CustomerDetailScreen({super.key, required this.customerId});
@@ -46,6 +49,99 @@ class CustomerDetailScreen extends ConsumerWidget {
     }
   }
 
+  Future<void> _editCustomer(BuildContext context, Customer customer) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => EditCustomerScreen(existing: customer),
+      ),
+    );
+  }
+
+  Future<void> _deleteCustomer(
+    BuildContext context,
+    WidgetRef ref,
+    Customer customer,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Mijozni o\'chirishmi?'),
+        content: Text(
+          '"${customer.name}" va uning barcha tranzaksiyalari o\'chiriladi. '
+          'Bu amal qaytarilmaydi.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(_, false),
+            child: const Text('Bekor qilish'),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: AppTheme.danger),
+            onPressed: () => Navigator.pop(_, true),
+            child: const Text('O\'chirish'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    await ref.read(customersProvider.notifier).remove(customer.id);
+    if (context.mounted) Navigator.pop(context);
+  }
+
+  Future<void> _editTxn(BuildContext context, Txn txn) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AddTransactionScreen(
+          customerId: txn.customerId,
+          existing: txn,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _deleteTxn(
+    BuildContext context,
+    WidgetRef ref,
+    Txn txn,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Yozuvni o\'chirishmi?'),
+        content: Text(
+          '${txn.type == TxnType.debt ? 'Qarz' : 'To\'lov'} '
+          '${Formatters.money(txn.amount)} o\'chiriladi.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(_, false),
+            child: const Text('Bekor qilish'),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: AppTheme.danger),
+            onPressed: () => Navigator.pop(_, true),
+            child: const Text('O\'chirish'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    final removed = await ref.read(addTransactionControllerProvider).remove(txn.id);
+    if (!context.mounted || removed == null) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('Yozuv o\'chirildi'),
+        action: SnackBarAction(
+          label: 'Qaytarish',
+          onPressed: () =>
+              ref.read(addTransactionControllerProvider).restore(removed),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final customersAsync = ref.watch(customersProvider);
@@ -64,18 +160,30 @@ class CustomerDetailScreen extends ConsumerWidget {
           customersAsync.maybeWhen(
             data: (list) {
               final cb = _findById(list, customerId);
-              if (cb?.customer.phone == null) return const SizedBox.shrink();
+              if (cb == null) return const SizedBox.shrink();
               return Row(
                 children: [
-                  IconButton(
-                    icon: const Icon(Icons.message_outlined),
-                    tooltip: 'SMS yuborish',
-                    onPressed: () => _sendSms(context, ref, cb!),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.call_outlined),
-                    tooltip: 'Qo\'ng\'iroq',
-                    onPressed: () => _call(context, cb!.customer.phone!),
+                  if (cb.customer.phone != null) ...[
+                    IconButton(
+                      icon: const Icon(Icons.message_outlined),
+                      tooltip: 'SMS yuborish',
+                      onPressed: () => _sendSms(context, ref, cb),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.call_outlined),
+                      tooltip: 'Qo\'ng\'iroq',
+                      onPressed: () => _call(context, cb.customer.phone!),
+                    ),
+                  ],
+                  PopupMenuButton<String>(
+                    itemBuilder: (_) => const [
+                      PopupMenuItem(value: 'edit', child: Text('Tahrirlash')),
+                      PopupMenuItem(value: 'delete', child: Text('O\'chirish')),
+                    ],
+                    onSelected: (v) {
+                      if (v == 'edit') _editCustomer(context, cb.customer);
+                      if (v == 'delete') _deleteCustomer(context, ref, cb.customer);
+                    },
                   ),
                 ],
               );
@@ -110,7 +218,11 @@ class CustomerDetailScreen extends ConsumerWidget {
                       padding: const EdgeInsets.symmetric(vertical: 8),
                       itemCount: txns.length,
                       separatorBuilder: (_, __) => const Divider(height: 1, indent: 16),
-                      itemBuilder: (context, i) => _TxnTile(txn: txns[i]),
+                      itemBuilder: (context, i) => _TxnTile(
+                        txn: txns[i],
+                        onEdit: () => _editTxn(context, txns[i]),
+                        onDelete: () => _deleteTxn(context, ref, txns[i]),
+                      ),
                     );
                   },
                 ),
@@ -152,28 +264,44 @@ class _Summary extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
-      color: Colors.white,
-      child: Column(
+      color: Theme.of(context).cardColor,
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            Formatters.money(balance.remaining),
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.w800,
-              color: balance.hasOverdue ? AppTheme.danger : AppTheme.textPrimary,
+          CustomerAvatar(name: c.name, photoPath: c.photoPath, size: 64),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  Formatters.money(balance.remaining),
+                  style: TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.w800,
+                    color: balance.hasOverdue ? AppTheme.danger : null,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  balance.remaining > 0
+                      ? 'Qaytarilishi kerak'
+                      : 'Qarz yo\'q',
+                  style: const TextStyle(color: AppTheme.textSecondary),
+                ),
+                const SizedBox(height: 12),
+                if (c.phone != null)
+                  _Row(
+                    icon: Icons.phone_outlined,
+                    text: UzbPhoneInputFormatter.fromE164(c.phone),
+                  ),
+                if (c.address != null)
+                  _Row(icon: Icons.location_on_outlined, text: c.address!),
+                if (c.note != null)
+                  _Row(icon: Icons.note_outlined, text: c.note!),
+              ],
             ),
           ),
-          const SizedBox(height: 4),
-          const Text(
-            'Qaytarilishi kerak',
-            style: TextStyle(color: AppTheme.textSecondary),
-          ),
-          const SizedBox(height: 12),
-          if (c.address != null)
-            _Row(icon: Icons.location_on_outlined, text: c.address!),
-          if (c.phone != null) _Row(icon: Icons.phone_outlined, text: c.phone!),
-          if (c.note != null) _Row(icon: Icons.note_outlined, text: c.note!),
         ],
       ),
     );
@@ -203,8 +331,14 @@ class _Row extends StatelessWidget {
 }
 
 class _TxnTile extends StatelessWidget {
-  const _TxnTile({required this.txn});
+  const _TxnTile({
+    required this.txn,
+    required this.onEdit,
+    required this.onDelete,
+  });
   final Txn txn;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -241,15 +375,31 @@ class _TxnTile extends StatelessWidget {
           if (txn.note != null) Text(txn.note!),
         ],
       ),
-      trailing: Text(
-        '$sign${Formatters.money(txn.amount)}',
-        style: TextStyle(
-          color: color,
-          fontWeight: FontWeight.w700,
-          fontSize: 15,
-        ),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            '$sign${Formatters.money(txn.amount)}',
+            style: TextStyle(
+              color: color,
+              fontWeight: FontWeight.w700,
+              fontSize: 15,
+            ),
+          ),
+          PopupMenuButton<String>(
+            itemBuilder: (_) => const [
+              PopupMenuItem(value: 'edit', child: Text('Tahrirlash')),
+              PopupMenuItem(value: 'delete', child: Text('O\'chirish')),
+            ],
+            onSelected: (v) {
+              if (v == 'edit') onEdit();
+              if (v == 'delete') onDelete();
+            },
+          ),
+        ],
       ),
       isThreeLine: txn.dueDate != null || txn.note != null,
+      onTap: onEdit,
     );
   }
 }

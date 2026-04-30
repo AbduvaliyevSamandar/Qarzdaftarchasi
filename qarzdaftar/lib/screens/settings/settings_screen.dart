@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:pinput/pinput.dart';
 
-import 'package:permission_handler/permission_handler.dart';
-
 import '../../providers/auth_provider.dart';
+import '../../providers/customers_provider.dart';
 import '../../providers/shop_provider.dart';
+import '../../providers/theme_provider.dart';
 import '../../services/auto_reminder_service.dart';
+import '../../services/export_service.dart';
 import '../../services/shop_service.dart';
 import '../../theme/app_theme.dart';
+import '../products/products_screen.dart';
 import '../shop/shop_setup_screen.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -50,11 +53,63 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (mounted) setState(() => _autoSms = value);
   }
 
+  Future<void> _exportExcel() async {
+    final shop = ref.read(shopProfileProvider).valueOrNull;
+    if (shop == null) return;
+    final list = await ref.read(customersProvider.future);
+    if (!mounted) return;
+    try {
+      final file = await ExportService.instance.exportToExcel(
+        shop: shop,
+        customers: list,
+      );
+      await ExportService.instance.shareFile(
+        file,
+        text: '${shop.name} — qarzdorlar ro\'yxati',
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Xatolik: $e')),
+      );
+    }
+  }
+
+  Future<void> _exportPdf() async {
+    final shop = ref.read(shopProfileProvider).valueOrNull;
+    if (shop == null) return;
+    final list = await ref.read(customersProvider.future);
+    if (!mounted) return;
+    try {
+      final file = await ExportService.instance.exportToPdf(
+        shop: shop,
+        customers: list,
+      );
+      await ExportService.instance.shareFile(
+        file,
+        text: '${shop.name} — qarz daftari',
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Xatolik: $e')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final shop = ref.watch(shopProfileProvider).valueOrNull;
+    final themeMode =
+        ref.watch(themeModeProvider).valueOrNull ?? ThemeMode.system;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Sozlamalar')),
+      appBar: AppBar(
+        title: const Text(
+          'Sozlamalar',
+          style: TextStyle(fontWeight: FontWeight.w700),
+        ),
+      ),
       body: ListView(
         children: [
           ListTile(
@@ -71,8 +126,24 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => ShopSetupScreen(initial: shop, editMode: true),
+                  builder: (_) =>
+                      ShopSetupScreen(initial: shop, editMode: true),
                 ),
+              );
+            },
+          ),
+          const Divider(height: 1),
+          ListTile(
+            leading: const Icon(Icons.inventory_2_outlined),
+            title: const Text('Mahsulotlar va narxlar'),
+            subtitle: const Text(
+              'Tez-tez qarzga olinadigan mahsulotlar ro\'yxati',
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ProductsScreen()),
               );
             },
           ),
@@ -81,17 +152,46 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             secondary: const Icon(Icons.notifications_active_outlined),
             title: const Text('Avtomatik eslatma bildirishnoma'),
             subtitle: const Text(
-              'Qarzi muddati o\'tgan mijozlar haqida kuniga 3 marta telefoningizga bildirishnoma keladi. Bildirishnomani bossangiz mijoz sahifasi ochiladi.',
+              'Qarzi muddati o\'tgan mijozlar haqida kuniga 3 marta telefoningizga bildirishnoma keladi',
             ),
             value: _autoSms ?? false,
             onChanged: _autoSms == null ? null : _toggleAutoSms,
           ),
           const Divider(height: 1),
           ListTile(
+            leading: const Icon(Icons.color_lens_outlined),
+            title: const Text('Tema'),
+            subtitle: Text(_themeLabel(themeMode)),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => _showThemeSheet(context, themeMode),
+          ),
+          const Divider(height: 1),
+          ListTile(
+            leading: const Icon(Icons.table_chart_outlined),
+            title: const Text('Excel\'ga eksport'),
+            subtitle: const Text('Mijozlar ro\'yxatini Excel fayl ko\'rinishida'),
+            trailing: const Icon(Icons.share_outlined),
+            onTap: _exportExcel,
+          ),
+          const Divider(height: 1),
+          ListTile(
+            leading: const Icon(Icons.picture_as_pdf_outlined),
+            title: const Text('PDF\'ga eksport'),
+            subtitle: const Text('Chop etishga tayyor PDF hisobot'),
+            trailing: const Icon(Icons.share_outlined),
+            onTap: _exportPdf,
+          ),
+          const Divider(height: 1),
+          ListTile(
             leading: const Icon(Icons.lock_reset_outlined),
             title: const Text('PIN-kodni o\'zgartirish'),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () => _openChangePin(context, ref),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const _ChangePinScreen()),
+              );
+            },
           ),
           const Divider(height: 1),
           ListTile(
@@ -118,11 +218,40 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  void _openChangePin(BuildContext context, WidgetRef ref) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const _ChangePinScreen()),
+  String _themeLabel(ThemeMode m) => switch (m) {
+        ThemeMode.dark => 'Tungi',
+        ThemeMode.light => 'Kunduzgi',
+        ThemeMode.system => 'Tizim sozlamasi',
+      };
+
+  Future<void> _showThemeSheet(BuildContext context, ThemeMode current) async {
+    final picked = await showModalBottomSheet<ThemeMode>(
+      context: context,
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 12),
+            const Text(
+              'Tema',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 8),
+            for (final m in ThemeMode.values)
+              RadioListTile<ThemeMode>(
+                title: Text(_themeLabel(m)),
+                value: m,
+                groupValue: current,
+                onChanged: (v) => Navigator.pop(_, v),
+              ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
     );
+    if (picked != null) {
+      await ref.read(themeModeProvider.notifier).setMode(picked);
+    }
   }
 }
 
@@ -137,7 +266,7 @@ class _ChangePinScreenState extends ConsumerState<_ChangePinScreen> {
   final _oldCtrl = TextEditingController();
   final _newCtrl = TextEditingController();
   final _confirmCtrl = TextEditingController();
-  int _step = 0; // 0=old, 1=new, 2=confirm
+  int _step = 0;
   String? _error;
   bool _saving = false;
 
@@ -234,7 +363,8 @@ class _ChangePinScreenState extends ConsumerState<_ChangePinScreen> {
               Text(
                 _title,
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                style:
+                    const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 32),
               Center(

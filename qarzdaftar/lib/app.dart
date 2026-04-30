@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'providers/theme_provider.dart';
 import 'screens/customers/customer_detail_screen.dart';
 import 'screens/splash/splash_screen.dart';
 import 'services/notification_service.dart';
@@ -43,10 +44,13 @@ class _QarzDaftarAppState extends ConsumerState<QarzDaftarApp> {
 
   @override
   Widget build(BuildContext context) {
+    final themeMode = ref.watch(themeModeProvider).valueOrNull ?? ThemeMode.system;
     return MaterialApp(
       title: 'Qarz Daftarchasi',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
+      darkTheme: AppTheme.dark,
+      themeMode: themeMode,
       navigatorKey: rootNavigatorKey,
       home: const SplashScreen(),
     );
