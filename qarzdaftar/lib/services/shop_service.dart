@@ -13,6 +13,7 @@ class ShopService {
   static const _kAutoSms = 'shop_auto_sms_enabled';
   static const _kThemeMode = 'app_theme_mode'; // system | light | dark
   static const _kLocale = 'app_locale'; // uz_Latn | uz_Cyrl | ru
+  static const _kAccentColor = 'app_accent_color'; // hex string
 
   Future<ShopProfile?> load() async {
     final prefs = await SharedPreferences.getInstance();
@@ -62,6 +63,16 @@ class ShopService {
   Future<void> saveLocale(String value) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_kLocale, value);
+  }
+
+  Future<int?> loadAccentColor() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(_kAccentColor);
+  }
+
+  Future<void> saveAccentColor(int value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_kAccentColor, value);
   }
 
   Future<void> _put(SharedPreferences prefs, String key, String? value) async {

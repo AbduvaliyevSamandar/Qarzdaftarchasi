@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../models/product.dart';
@@ -12,6 +13,8 @@ import '../../theme/app_theme.dart';
 import '../../utils/formatters.dart';
 import '../../utils/input_formatters.dart';
 import '../../widgets/amount_field.dart';
+import '../../widgets/app_snackbar.dart';
+import '../../widgets/confetti_overlay.dart';
 import '../../widgets/note_field.dart';
 
 class AddTransactionScreen extends ConsumerStatefulWidget {
@@ -167,6 +170,12 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     if (cb == null) return;
     if (cb.remaining > 0) return;
     if (cb.totalDebt <= 0) return;
+
+    if (!mounted) return;
+
+    HapticFeedback.heavyImpact();
+    ConfettiOverlay.show(context);
+
     final phone = cb.customer.phone;
     if (phone == null || phone.trim().isEmpty) return;
 
@@ -178,11 +187,10 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       ownerPhone: shop?.ownerPhone,
     );
 
-    if (!mounted) return;
     final send = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Qarz to\'liq to\'landi'),
+        title: const Text('🎉 Qarz to\'liq to\'landi'),
         content: const Text('Mijozga "rahmat" SMS yuboramizmi?'),
         actions: [
           TextButton(

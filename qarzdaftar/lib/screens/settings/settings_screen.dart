@@ -4,6 +4,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:pinput/pinput.dart';
 
 import '../../l10n/app_locale.dart';
+import '../../providers/accent_color_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/customers_provider.dart';
 import '../../providers/locale_provider.dart';
@@ -173,6 +174,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             onTap: () => _showThemeSheet(context, themeMode, tr),
           ),
           const Divider(height: 1),
+          _AccentRow(),
+          const Divider(height: 1),
           ListTile(
             leading: const Icon(Icons.cloud_download_outlined),
             title: Text(tr.backupRestore),
@@ -300,6 +303,77 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (picked != null) {
       await ref.read(localeProvider.notifier).setLocale(picked);
     }
+  }
+}
+
+class _AccentRow extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final current = ref.watch(accentColorProvider).valueOrNull ?? AppTheme.primary;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.palette_outlined),
+              const SizedBox(width: 16),
+              const Text(
+                'Asosiy rang',
+                style: TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                for (final a in kAccents) ...[
+                  GestureDetector(
+                    onTap: () =>
+                        ref.read(accentColorProvider.notifier).setColor(a.color),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: a.color,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: a.color.value == current.value
+                              ? Theme.of(context).textTheme.bodyLarge?.color ??
+                                  Colors.black
+                              : Colors.transparent,
+                          width: 3,
+                        ),
+                        boxShadow: [
+                          if (a.color.value == current.value)
+                            BoxShadow(
+                              color: a.color.withValues(alpha: 0.3),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
+                            ),
+                        ],
+                      ),
+                      child: a.color.value == current.value
+                          ? const Icon(
+                              Icons.check,
+                              color: Colors.white,
+                              size: 20,
+                            )
+                          : null,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

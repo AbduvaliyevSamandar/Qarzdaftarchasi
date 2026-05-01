@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../providers/customers_provider.dart';
 import '../../providers/locale_provider.dart';
 import '../reports/reports_screen.dart';
 import '../settings/settings_screen.dart';
@@ -49,6 +50,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   @override
   Widget build(BuildContext context) {
     final tr = ref.watch(stringsProvider);
+    final overdue = ref.watch(overdueCountProvider);
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) async {
@@ -60,11 +62,22 @@ class _HomeShellState extends ConsumerState<HomeShell> {
         body: IndexedStack(index: _index, children: _tabs),
         bottomNavigationBar: NavigationBar(
           selectedIndex: _index,
-          onDestinationSelected: (i) => setState(() => _index = i),
+          onDestinationSelected: (i) {
+            HapticFeedback.selectionClick();
+            setState(() => _index = i);
+          },
           destinations: [
             NavigationDestination(
-              icon: const Icon(Icons.people_outline),
-              selectedIcon: const Icon(Icons.people),
+              icon: Badge(
+                isLabelVisible: overdue > 0,
+                label: Text('$overdue'),
+                child: const Icon(Icons.people_outline),
+              ),
+              selectedIcon: Badge(
+                isLabelVisible: overdue > 0,
+                label: Text('$overdue'),
+                child: const Icon(Icons.people),
+              ),
               label: tr.tabCustomers,
             ),
             NavigationDestination(

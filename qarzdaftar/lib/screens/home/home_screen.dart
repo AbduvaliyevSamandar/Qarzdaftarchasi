@@ -2,11 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../models/customer_balance.dart';
+import '../../models/transaction.dart';
 import '../../providers/customers_provider.dart';
 import '../../widgets/customer_tile.dart';
 import '../../widgets/balance_card.dart';
+import '../../widgets/skeleton.dart';
+import '../../widgets/today_summary_card.dart';
 import '../customers/customer_detail_screen.dart';
 import '../customers/edit_customer_screen.dart';
+import '../transactions/add_transaction_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -119,6 +123,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ),
               ),
             ),
+            const SliverToBoxAdapter(child: TodaySummaryCard()),
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
@@ -185,7 +190,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             const SliverToBoxAdapter(child: SizedBox(height: 8)),
             customersAsync.when(
               loading: () => const SliverFillRemaining(
-                child: Center(child: CircularProgressIndicator()),
+                hasScrollBody: false,
+                child: SizedBox(
+                  height: 400,
+                  child: CustomerListSkeleton(),
+                ),
               ),
               error: (e, _) => SliverFillRemaining(
                 child: Center(child: Text('Xatolik: $e')),
@@ -221,6 +230,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           MaterialPageRoute(
                             builder: (_) =>
                                 CustomerDetailScreen(customerId: cb.customer.id),
+                          ),
+                        );
+                      },
+                      onAddDebt: (TxnType type) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => AddTransactionScreen(
+                              customerId: cb.customer.id,
+                            ),
+                          ),
+                        );
+                      },
+                      onAddPayment: (TxnType type) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => AddTransactionScreen(
+                              customerId: cb.customer.id,
+                            ),
                           ),
                         );
                       },

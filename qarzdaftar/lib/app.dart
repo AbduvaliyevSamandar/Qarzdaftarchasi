@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'providers/accent_color_provider.dart';
 import 'providers/theme_provider.dart';
 import 'screens/customers/customer_detail_screen.dart';
 import 'screens/splash/splash_screen.dart';
@@ -45,11 +46,12 @@ class _QarzDaftarAppState extends ConsumerState<QarzDaftarApp> {
   @override
   Widget build(BuildContext context) {
     final themeMode = ref.watch(themeModeProvider).valueOrNull ?? ThemeMode.system;
+    final accent = ref.watch(accentColorProvider).valueOrNull ?? AppTheme.primary;
     return MaterialApp(
       title: 'Qarz Daftarchasi',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.light,
-      darkTheme: AppTheme.dark,
+      theme: AppTheme.light(seed: accent),
+      darkTheme: AppTheme.dark(seed: accent),
       themeMode: themeMode,
       navigatorKey: rootNavigatorKey,
       home: const SplashScreen(),

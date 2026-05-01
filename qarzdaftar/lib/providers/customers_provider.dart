@@ -95,3 +95,27 @@ final customerFilterProvider =
     StateProvider<CustomerFilter>((_) => CustomerFilter.all);
 final customerSortProvider =
     StateProvider<CustomerSort>((_) => CustomerSort.byDebtDesc);
+
+final todaySummaryProvider = FutureProvider.autoDispose<
+    ({double debt, double payment, int count})>((ref) async {
+  final ownerId = ref.watch(shopOwnerIdProvider);
+  if (ownerId == null) return (debt: 0.0, payment: 0.0, count: 0);
+  ref.watch(customersProvider);
+  final now = DateTime.now();
+  final from = DateTime(now.year, now.month, now.day);
+  final to = from.add(const Duration(days: 1));
+  final txns = await ref
+      .read(transactionRepoProvider)
+      .listAllForOwner(ownerId, from: from, to: to);
+  double debt = 0, payment = 0;
+  for (final t in txns) {
+    if (t.type.name == 'debt') debt += t.amount;
+    if (t.type.name == 'payment') payment += t.amount;
+  }
+  return (debt: debt, payment: payment, count: txns.length);
+});
+
+final overdueCountProvider = Provider<int>((ref) {
+  final list = ref.watch(customersProvider).valueOrNull ?? const [];
+  return list.where((cb) => cb.hasOverdue).length;
+});
