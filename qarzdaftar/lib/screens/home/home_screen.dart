@@ -262,15 +262,219 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
+      floatingActionButton: _SpeedDialFab(
+        onAddCustomer: () {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const EditCustomerScreen()),
           );
         },
-        icon: const Icon(Icons.person_add_alt_1),
-        label: const Text('Mijoz qo\'shish'),
+        onAddTransaction: () => _pickCustomerThenAddTxn(context),
+      ),
+    );
+  }
+
+  Future<void> _pickCustomerThenAddTxn(BuildContext context) async {
+    final list = ref.read(customersProvider).valueOrNull ?? const [];
+    if (list.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Avval mijoz qo\'shing')),
+      );
+      return;
+    }
+    final cb = await showModalBottomSheet<CustomerBalance>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _CustomerPickerSheet(list: list),
+    );
+    if (cb == null || !context.mounted) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AddTransactionScreen(customerId: cb.customer.id),
+      ),
+    );
+  }
+}
+
+class _SpeedDialFab extends StatefulWidget {
+  const _SpeedDialFab({
+    required this.onAddCustomer,
+    required this.onAddTransaction,
+  });
+
+  final VoidCallback onAddCustomer;
+  final VoidCallback onAddTransaction;
+
+  @override
+  State<_SpeedDialFab> createState() => _SpeedDialFabState();
+}
+
+class _SpeedDialFabState extends State<_SpeedDialFab>
+    with SingleTickerProviderStateMixin {
+  bool _open = false;
+  late final AnimationController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 220),
+    );
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  void _toggle() {
+    setState(() => _open = !_open);
+    if (_open) {
+      _ctrl.forward();
+    } else {
+      _ctrl.reverse();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        ScaleTransition(
+          scale: _ctrl,
+          alignment: Alignment.bottomRight,
+          child: FadeTransition(
+            opacity: _ctrl,
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: FloatingActionButton.extended(
+                heroTag: 'fab-customer',
+                onPressed: () {
+                  _toggle();
+                  widget.onAddCustomer();
+                },
+                icon: const Icon(Icons.person_add_alt_1),
+                label: const Text('Mijoz'),
+                backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
+                foregroundColor: Theme.of(context).colorScheme.onSecondaryContainer,
+              ),
+            ),
+          ),
+        ),
+        ScaleTransition(
+          scale: _ctrl,
+          alignment: Alignment.bottomRight,
+          child: FadeTransition(
+            opacity: _ctrl,
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: FloatingActionButton.extended(
+                heroTag: 'fab-txn',
+                onPressed: () {
+                  _toggle();
+                  widget.onAddTransaction();
+                },
+                icon: const Icon(Icons.receipt_long_outlined),
+                label: const Text('Yozuv'),
+                backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
+                foregroundColor: Theme.of(context).colorScheme.onSecondaryContainer,
+              ),
+            ),
+          ),
+        ),
+        FloatingActionButton(
+          heroTag: 'fab-main',
+          onPressed: _toggle,
+          child: AnimatedRotation(
+            duration: const Duration(milliseconds: 220),
+            turns: _open ? 0.125 : 0,
+            child: const Icon(Icons.add),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CustomerPickerSheet extends StatefulWidget {
+  const _CustomerPickerSheet({required this.list});
+  final List<CustomerBalance> list;
+
+  @override
+  State<_CustomerPickerSheet> createState() => _CustomerPickerSheetState();
+}
+
+class _CustomerPickerSheetState extends State<_CustomerPickerSheet> {
+  String _q = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final filtered = _q.isEmpty
+        ? widget.list
+        : widget.list.where((cb) {
+            final name = cb.customer.name.toLowerCase();
+            final phone = cb.customer.phone ?? '';
+            return name.contains(_q.toLowerCase()) || phone.contains(_q);
+          }).toList();
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: SizedBox(
+        height: MediaQuery.of(context).size.height * 0.7,
+        child: Column(
+          children: [
+            const SizedBox(height: 12),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Mijozni tanlang',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: TextField(
+                onChanged: (v) => setState(() => _q = v.trim()),
+                decoration: const InputDecoration(
+                  hintText: 'Qidirish',
+                  prefixIcon: Icon(Icons.search),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Expanded(
+              child: ListView.builder(
+                itemCount: filtered.length,
+                itemBuilder: (_, i) {
+                  final cb = filtered[i];
+                  return CustomerTile(
+                    balance: cb,
+                    onTap: () => Navigator.pop(context, cb),
+                    onAddDebt: (_) => Navigator.pop(context, cb),
+                    onAddPayment: (_) => Navigator.pop(context, cb),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
