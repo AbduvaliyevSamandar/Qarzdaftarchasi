@@ -37,27 +37,28 @@ class AppTheme {
   }
 
   static TextTheme _textTheme(TextTheme base) {
-    return GoogleFonts.interTextTheme(base).copyWith(
-      displayLarge: GoogleFonts.inter(
+    final inter = GoogleFonts.interTextTheme(base);
+    return inter.copyWith(
+      displayLarge: inter.displayLarge?.copyWith(
         fontSize: 32,
         fontWeight: FontWeight.w800,
         letterSpacing: -0.5,
       ),
-      headlineSmall: GoogleFonts.inter(
+      headlineSmall: inter.headlineSmall?.copyWith(
         fontSize: 18,
         fontWeight: FontWeight.w700,
       ),
-      titleLarge: GoogleFonts.inter(
+      titleLarge: inter.titleLarge?.copyWith(
         fontSize: 18,
         fontWeight: FontWeight.w700,
       ),
-      titleMedium: GoogleFonts.inter(
+      titleMedium: inter.titleMedium?.copyWith(
         fontSize: 16,
         fontWeight: FontWeight.w600,
       ),
-      bodyLarge: GoogleFonts.inter(fontSize: 15),
-      bodyMedium: GoogleFonts.inter(fontSize: 14),
-      labelLarge: GoogleFonts.inter(
+      bodyLarge: inter.bodyLarge?.copyWith(fontSize: 15),
+      bodyMedium: inter.bodyMedium?.copyWith(fontSize: 14),
+      labelLarge: inter.labelLarge?.copyWith(
         fontSize: 14,
         fontWeight: FontWeight.w600,
       ),
@@ -72,7 +73,10 @@ class AppTheme {
       scaffoldBackgroundColor: bg,
     );
     return base.copyWith(
-      textTheme: _textTheme(base.textTheme),
+      textTheme: _textTheme(base.textTheme).apply(
+        bodyColor: textPrimary,
+        displayColor: textPrimary,
+      ),
       appBarTheme: AppBarTheme(
         backgroundColor: bg,
         foregroundColor: textPrimary,
@@ -135,6 +139,16 @@ class AppTheme {
           borderSide: BorderSide(color: seed, width: 1.5),
         ),
         labelStyle: GoogleFonts.inter(color: textSecondary, fontSize: 14),
+        floatingLabelStyle: GoogleFonts.inter(color: textSecondary, fontSize: 14),
+        hintStyle: GoogleFonts.inter(
+          color: textSecondary.withValues(alpha: 0.6),
+          fontSize: 14,
+        ),
+      ),
+      textSelectionTheme: TextSelectionThemeData(
+        cursorColor: seed,
+        selectionColor: seed.withValues(alpha: 0.25),
+        selectionHandleColor: seed,
       ),
       dividerTheme: const DividerThemeData(
         color: border,
@@ -233,6 +247,18 @@ class AppTheme {
           borderRadius: BorderRadius.circular(14),
           borderSide: BorderSide(color: seed, width: 1.5),
         ),
+        labelStyle: GoogleFonts.inter(color: darkTextSecondary, fontSize: 14),
+        floatingLabelStyle:
+            GoogleFonts.inter(color: darkTextSecondary, fontSize: 14),
+        hintStyle: GoogleFonts.inter(
+          color: darkTextSecondary.withValues(alpha: 0.6),
+          fontSize: 14,
+        ),
+      ),
+      textSelectionTheme: TextSelectionThemeData(
+        cursorColor: seed,
+        selectionColor: seed.withValues(alpha: 0.30),
+        selectionHandleColor: seed,
       ),
       dividerTheme: const DividerThemeData(
         color: darkBorder,
